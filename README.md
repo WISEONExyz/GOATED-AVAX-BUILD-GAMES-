@@ -11,13 +11,13 @@ Starter codebase for a decentralized bounty marketplace on Avalanche C-Chain (Fu
   - contributor submissions by URI (IPFS/Arweave/etc.)
   - poster approval flow
   - automatic payout to winner
-  - poster refund after deadline if unresolved
+  - poster cancel flow only when submission count is zero
 - Solidity events:
   - `BountyCreated`
   - `SubmissionAdded`
   - `WinnerSelected`
   - `FundsReleased`
-  - `RefundIssued`
+  - `BountyCanceled`
 - Hardhat Fuji network config
 - React + Ethers frontend with Core Wallet and WalletConnect
 
@@ -59,4 +59,4 @@ npm run dev
 - Never commit `.env` files or private keys.
 - Verify network/chain ID before transacting (`43113` Fuji, `43114` Mainnet).
 - Verify contracts on Snowtrace after deployment.
-- Add `ReentrancyGuard` and stricter input limits for production hardening.
+- Keep reentrancy protections and stricter input limits for production hardening.

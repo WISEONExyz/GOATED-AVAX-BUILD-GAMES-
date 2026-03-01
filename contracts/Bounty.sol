@@ -20,6 +20,7 @@ contract Bounty {
     address public winner;
 
     Submission[] private submissions;
+    uint256 private unlocked = 1;
 
     event SubmissionAdded(uint256 indexed submissionId, address indexed contributor, string uri);
     event WinnerSelected(uint256 indexed submissionId, address indexed winner);
@@ -34,6 +35,13 @@ contract Bounty {
     modifier notResolved() {
         require(!resolved, "Already resolved");
         _;
+    }
+
+    modifier nonReentrant() {
+        require(unlocked == 1, "Reentrancy");
+        unlocked = 2;
+        _;
+        unlocked = 1;
     }
 
     constructor(
@@ -71,7 +79,7 @@ contract Bounty {
     }
 
     /// @notice Poster selects winner and contract auto-releases escrow.
-    function approveSubmission(uint256 submissionId) external onlyPoster notResolved {
+    function approveSubmission(uint256 submissionId) external onlyPoster notResolved nonReentrant {
         require(block.timestamp <= deadline, "Deadline passed");
         require(submissionId < submissions.length, "Invalid submission");
 
@@ -89,7 +97,7 @@ contract Bounty {
     }
 
     /// @notice Poster can cancel only if nobody has submitted.
-    function cancelBounty() external onlyPoster notResolved {
+    function cancelBounty() external onlyPoster notResolved nonReentrant {
         require(submissions.length == 0, "Cannot cancel after submissions");
         resolved = true;
 

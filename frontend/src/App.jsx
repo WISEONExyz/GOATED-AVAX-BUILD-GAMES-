@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { BrowserProvider, Contract, JsonRpcProvider, ethers } from "ethers";
-import EthereumProvider from "@walletconnect/ethereum-provider";
 import { bountyAbi } from "./lib/bountyAbi";
 import { factoryAbi } from "./lib/factoryAbi";
 import { FACTORY_ADDRESS, FUJI_PARAMS, WALLETCONNECT_PROJECT_ID } from "./lib/config";
@@ -34,6 +33,38 @@ function getInjectedProvider() {
 
 function getPath() {
   return window.location.pathname || "/";
+}
+
+function extractErrorMessage(err) {
+  const candidates = [
+    err?.shortMessage,
+    err?.reason,
+    err?.info?.error?.message,
+    err?.error?.message,
+    err?.data?.message,
+    err?.cause?.message,
+    err?.message
+  ].filter(Boolean);
+
+  const raw = String(candidates[0] || "Transaction failed");
+  const lower = raw.toLowerCase();
+
+  if (lower.includes("could not coalesce error")) {
+    return "RPC/provider error. Check wallet network (Fuji) and RPC settings, then retry.";
+  }
+  if (lower.includes("user rejected") || lower.includes("user denied")) {
+    return "Transaction was rejected in wallet.";
+  }
+  if (lower.includes("insufficient funds")) {
+    return "Insufficient AVAX for value + gas. Fund your wallet and retry.";
+  }
+
+  const revertedMatch = raw.match(/execution reverted(?::\s*)?"?([^"]+)"?/i);
+  if (revertedMatch?.[1]) {
+    return revertedMatch[1];
+  }
+
+  return raw;
 }
 
 export default function App() {
@@ -148,7 +179,7 @@ export default function App() {
       await action();
       setNotice("Done.");
     } catch (err) {
-      const message = err?.shortMessage || err?.reason || err?.message || "Transaction failed";
+      const message = extractErrorMessage(err);
       setError(message);
       setNotice("");
     } finally {
@@ -179,6 +210,7 @@ export default function App() {
     if (!WALLETCONNECT_PROJECT_ID) {
       throw new Error("Missing VITE_WALLETCONNECT_PROJECT_ID in frontend/.env");
     }
+    const { default: EthereumProvider } = await import("@walletconnect/ethereum-provider");
     const wc = await EthereumProvider.init({
       projectId: WALLETCONNECT_PROJECT_ID,
       chains: [FUJI_CHAIN_ID],
